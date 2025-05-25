@@ -1,0 +1,23 @@
+# CONFIGURAÇÃO DEFINITIVA PARA EVITAR TODOS OS CONFLITOS DE PORTA
+
+project_id = "talentsync"
+
+# Move a API Gateway (Kong) para a porta 15421
+[api]
+port = 15421
+
+# Move o Banco de Dados (Postgres) para a porta 15422
+[db]
+port = 15422
+
+# Move a interface do Studio para a porta 15423
+[studio]
+port = 15423
+
+# Move o serviço de teste de email (Inbucket) para a porta 15424
+[inbucket]
+port = 15424
+
+# Move o serviço de Analytics para a porta 15427
+[analytics]
+port = 15427
