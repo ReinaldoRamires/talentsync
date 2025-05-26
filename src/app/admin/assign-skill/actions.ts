@@ -1,30 +1,30 @@
-// src/app/admin/assign-skill/actions.ts
-"use server"; // Diretiva OBRIGATÓRIA no topo do arquivo para Server Actions
+// Dentro de src/app/admin/assign-skill/actions.ts
+"use server";
 
-import { createClient } from '../../../lib/supabaseClient'; // Ajuste o caminho se necessário
+import { createClient } from '../../../lib/supabaseClient'; // Ajuste este caminho se necessário (4 ../ para src/lib)
+import { revalidatePath } from 'next/cache';
 
-// Interface para o resultado da Server Action
 interface ActionResult {
   success: boolean;
   message: string;
 }
 
-export async function assignSkillToServer(formData: FormData): Promise<ActionResult> {
+export async function assignSkillToProfileAction(formData: FormData): Promise<ActionResult> {
   const supabase = createClient();
 
-  const profileId = formData.get('profileId') as string;
-  const skillId = formData.get('skillId') as string;
-  const proficiencyLevel = formData.get('proficiencyLevel') as string;
+  const profileId = formData.get('profileIdForm') as string; // Usando os nomes com 'Form'
+  const skillId = formData.get('skillIdForm') as string;
+  const proficiencyLevel = formData.get('proficiencyLevelForm') as string;
 
   if (!profileId || !skillId || !proficiencyLevel) {
-    return { success: false, message: "Erro: Todos os campos são obrigatórios." };
+    return { success: false, message: "Erro: Perfil, Skill e Nível de Proficiência são obrigatórios." };
   }
 
   const dataToInsert = {
     profile_id: profileId,
     skill_id: parseInt(skillId, 10),
     proficiency_level: parseInt(proficiencyLevel, 10),
-    source_of_assessment: 'admin_manual_entry' // Exemplo de como podemos adicionar esta informação
+    source_of_assessment: 'admin_assign_skill_form' // Exemplo
   };
 
   const { error } = await supabase
@@ -32,13 +32,15 @@ export async function assignSkillToServer(formData: FormData): Promise<ActionRes
     .insert(dataToInsert);
 
   if (error) {
-    console.error('Erro ao associar skill na Server Action:', error);
-    return { success: false, message: 'Erro ao associar skill: ' + error.message };
+    console.error("Erro ao associar skill ao perfil (Server Action):", error);
+    if (error.code === '23505') { // Violação de chave única
+        return { success: false, message: "Erro: Esta skill já está associada a este perfil." };
+    }
+    return { success: false, message: "Erro ao associar skill ao perfil: " + error.message };
   }
 
-  // Aqui você pode adicionar revalidatePath se precisar atualizar dados na tela após a ação
-  // import { revalidatePath } from 'next/cache';
-  // revalidatePath('/admin/assign-skill'); // Exemplo
+  // Revalida o path da página de assign-skill OU de uma página que liste os perfis com skills
+  revalidatePath('/admin/assign-skill'); // Ou o path mais específico se necessário
 
-  return { success: true, message: `Skill associada com sucesso ao perfil!` };
+  return { success: true, message: "Skill associada ao perfil com sucesso!" };
 }
