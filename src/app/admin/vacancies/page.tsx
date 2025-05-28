@@ -15,37 +15,47 @@ interface Vacancy {
   type: 'REAL' | 'TEMPLATE' | string | null;
 }
 
-async function getVacancies(): Promise<Vacancy[]> {
-  const supabase = await createSupabaseServerClient(); // ✅ USA await
+async function getVacancies(userId: string | undefined): Promise<Vacancy[]> {
+  // Se não houver userId (usuário não logado ou erro), não buscar vagas
+  if (!userId) {
+    console.warn('[Server getVacancies] Tentativa de buscar vagas sem ID de usuário.');
+    return [];
+  }
+
+  const supabase = await createSupabaseServerClient(); 
 
   const { data, error } = await supabase
     .from('vacancies')
     .select('id, title, company_name, status, owner_id, created_at, type')
     .eq('type', 'REAL')
+    .eq('owner_id', userId) // ⬅️ NOVO FILTRO: apenas vagas do usuário logado
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Erro ao buscar vagas REAIS:', error.message);
+    console.error('Erro ao buscar vagas REAIS do usuário:', error.message);
     return [];
   }
+  console.log('[Server getVacancies] Dados brutos do Supabase:', data); // ⬅️ ADICIONE ESTE LOG
   return data || [];
 }
-
 // Importe o componente de menu de ações que criamos anteriormente
 import VacancyActionsMenu from './VacancyActionsMenu'; 
 
 export default async function VacanciesListPage() {
-  const supabase = await createSupabaseServerClient(); // ✅ USA await
+  const supabase = await createSupabaseServerClient(); 
   
-  const vacancies = await getVacancies(); // ✅ getVacancies agora é implicitamente async se createSupabaseServerClient for
-
+  // 1. Primeiro, obtenha o usuário e o ID do usuário
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
   if (userError) {
     console.error('[ Server ] Erro ao buscar usuário na página de vagas:', userError.message);
+    // Lidar com o erro aqui - talvez retornar uma UI de erro ou [] para vacancies
   }
   const currentUserId = user?.id;
   console.log('[ Server ] ID do Usuário Logado (VacanciesListPage):', currentUserId);
+
+  // 2. AGORA, chame getVacancies passando o currentUserId
+  const vacancies = await getVacancies(currentUserId);
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -54,11 +64,12 @@ export default async function VacanciesListPage() {
           Gerenciamento de Vagas
         </h1>
         {/* O aviso 'legacyBehavior' ainda está aqui. Rode o codemod depois de confirmar que a página funciona. */}
-        <Link href="/admin/vacancies/create" legacyBehavior> 
-          <a className="px-4 py-2 bg-green-600 text-white font-semibold rounded-md shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 w-full md:w-auto text-center">
-            + Criar Nova Vaga
-          </a>
-        </Link>
+        <Link 
+  href="/admin/vacancies/create" 
+  className="px-4 py-2 bg-green-600 text-white font-semibold rounded-md shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 w-full md:w-auto text-center"
+>
+  + Criar Nova Vaga
+</Link>
       </div>
       {vacancies.length === 0 ? (
         <p className="text-gray-600 bg-white p-6 rounded-lg shadow text-center">Nenhuma vaga REAL cadastrada ainda. Comece criando uma nova!</p>
@@ -82,9 +93,13 @@ export default async function VacanciesListPage() {
                     <p className="text-gray-900 whitespace-no-wrap">{vacancy.id}</p>
                   </td>
                   <td className="px-5 py-4 border-b border-gray-200 bg-white text-sm">
-                    <Link href={`/admin/vacancies/${vacancy.id}/details`}>
-                    </Link>
-                  </td>
+                  <Link
+                      href={`/admin/vacancies/${vacancy.id}/details`}
+                    className="text-gray-900 hover:text-indigo-600 whitespace-no-wrap font-medium"
+        >
+          {vacancy.title}
+        </Link>
+      </td>
                   <td className="px-5 py-4 border-b border-gray-200 bg-white text-sm">
                     <p className="text-gray-900 whitespace-no-wrap">{vacancy.company_name || 'N/A'}</p>
                   </td>
