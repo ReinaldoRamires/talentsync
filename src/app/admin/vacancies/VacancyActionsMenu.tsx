@@ -64,7 +64,6 @@ export default function VacancyActionsMenu({ vacancy, currentUserId }: VacancyAc
           </svg>
         </button>
       </div>
-
       {isOpen && (
         <div
           className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
@@ -84,35 +83,38 @@ export default function VacancyActionsMenu({ vacancy, currentUserId }: VacancyAc
               </a>
             </Link> */}
 
-            <Link href={`/admin/vacancies/${vacancy.id}/manage-skills`} passHref>
-              <a
-                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                role="menuitem"
-                onClick={() => setIsOpen(false)}
-              >
+            <Link
+              href={`/admin/vacancies/${vacancy.id}/manage-skills`}
+              passHref
+              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              role="menuitem"
+              onClick={() => setIsOpen(false)}>
+              
                 Gerenciar Skills
-              </a>
+              
             </Link>
 
             {isOwner && ( // Ações visíveis apenas para o proprietário
-              <>
-                <Link href={`/admin/vacancies/${vacancy.id}/edit`} passHref>
-                  <a
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                    role="menuitem"
-                    onClick={() => setIsOpen(false)}
-                  >
+              (<>
+                <Link
+                  href={`/admin/vacancies/${vacancy.id}/edit`}
+                  passHref
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                  role="menuitem"
+                  onClick={() => setIsOpen(false)}>
+                  
                     Editar Vaga
-                  </a>
+                  
                 </Link>
-                <Link href={`/admin/vacancies/${vacancy.id}/candidates`} passHref>
-                   <a
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                    role="menuitem"
-                    onClick={() => setIsOpen(false)}
-                  >
+                <Link
+                  href={`/admin/vacancies/${vacancy.id}/candidates`}
+                  passHref
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                  role="menuitem"
+                  onClick={() => setIsOpen(false)}>
+                   
                     Ver Candidatos
-                  </a>
+                  
                 </Link>
                 <button
                   onClick={handleArchive}
@@ -122,7 +124,7 @@ export default function VacancyActionsMenu({ vacancy, currentUserId }: VacancyAc
                   Arquivar/Desativar Vaga 
                   {/* Você pode querer mudar o texto baseado no status atual */}
                 </button>
-              </>
+              </>)
             )}
           </div>
         </div>

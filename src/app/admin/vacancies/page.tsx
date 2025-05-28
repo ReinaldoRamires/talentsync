@@ -60,7 +60,6 @@ export default async function VacanciesListPage() {
           </a>
         </Link>
       </div>
-
       {vacancies.length === 0 ? (
         <p className="text-gray-600 bg-white p-6 rounded-lg shadow text-center">Nenhuma vaga REAL cadastrada ainda. Comece criando uma nova!</p>
       ) : (
@@ -78,15 +77,12 @@ export default async function VacanciesListPage() {
             </thead>
             <tbody>
               {vacancies.map((vacancy: Vacancy) => ( // Adicionado tipo explícito para 'vacancy'
-                <tr key={vacancy.id} className="hover:bg-gray-50">
+                (<tr key={vacancy.id} className="hover:bg-gray-50">
                   <td className="px-5 py-4 border-b border-gray-200 bg-white text-sm">
                     <p className="text-gray-900 whitespace-no-wrap">{vacancy.id}</p>
                   </td>
                   <td className="px-5 py-4 border-b border-gray-200 bg-white text-sm">
-                    <Link href={`/admin/vacancies/${vacancy.id}/details`} legacyBehavior>
-                      <a className="text-gray-900 hover:text-indigo-600 whitespace-no-wrap font-medium">
-                        {vacancy.title}
-                      </a>
+                    <Link href={`/admin/vacancies/${vacancy.id}/details`}>
                     </Link>
                   </td>
                   <td className="px-5 py-4 border-b border-gray-200 bg-white text-sm">
@@ -114,7 +110,7 @@ export default async function VacanciesListPage() {
                       currentUserId={currentUserId} 
                     />
                   </td>
-                </tr>
+                </tr>)
               ))}
             </tbody>
           </table>
