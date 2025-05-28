@@ -1,11 +1,9 @@
 // src/app/admin/assign-skill/page.tsx
 "use client";
 
-import { useState, useEffect, startTransition } from 'react';
+import { useState, useEffect, startTransition, useCallback } from 'react'; // Adicionado useCallback
 import { useRouter } from 'next/navigation'; 
-// ⬇️ CONFIRA ESTE CAMINHO! Se sua pasta lib está em src/lib, 
-// são 4 '../' para sair de assign-skill, admin, app até src, depois /lib
-import { createClient } from '../../../lib/supabaseClient'; 
+import { createClient } from '../../../lib/supabaseClient'; // Ajuste o caminho se necessário
 import { assignSkillToProfileAction } from './actions'; 
 
 // --- TIPOS ---
@@ -13,18 +11,14 @@ interface Profile {
   id: string; 
   full_name: string | null;
 }
-
 interface Skill {
   id: number; 
   name: string;
 }
-
-// Interface para as skills já associadas ao perfil selecionado
 interface AssignedProfileSkill {
   skill_id: number;
   proficiency_level: number | null;
-  // Adicione outros campos se você os seleciona, como source_of_assessment, experience_years
-  skills: { // skills é um OBJETO único (ou nulo se a skill relacionada for deletada)
+  skills: { 
     name: string;
   } | null; 
 }
@@ -33,32 +27,64 @@ interface AssignedProfileSkill {
 export default function AssignSkillPage() {
   const router = useRouter(); 
 
-  // Estados para os dados dos dropdowns iniciais
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
-  
-  // Estados para o formulário de associação
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
   const [selectedSkillId, setSelectedSkillId] = useState<string>('');
   const [proficiencyLevel, setProficiencyLevel] = useState<number>(3);
-  
-  // Estados para o resumo do perfil selecionado
   const [currentProfileDetails, setCurrentProfileDetails] = useState<Profile | null>(null);
   const [currentProfileAssignedSkills, setCurrentProfileAssignedSkills] = useState<AssignedProfileSkill[]>([]);
   const [isLoadingProfileDetails, setIsLoadingProfileDetails] = useState<boolean>(false);
-  
-  // Estados para feedback
   const [message, setMessage] = useState<string>('');
-  const [isLoadingInitialData, setIsLoadingInitialData] = useState<boolean>(true); // Renomeado para clareza
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const supabase = createClient();
+
+  // Função para buscar dados específicos do perfil, AGORA NO ESCOPO DO COMPONENTE
+  // Envolvemos com useCallback para otimizar, pois ela é usada como dependência de um useEffect
+  const fetchProfileSpecificData = useCallback(async () => {
+    if (!selectedProfileId) {
+      setCurrentProfileDetails(null);
+      setCurrentProfileAssignedSkills([]);
+      setIsLoadingProfileDetails(false);
+      return; 
+    }
+
+    setIsLoadingProfileDetails(true);
+    setMessage(''); 
+
+    try {
+      const profileDetail = profiles.find(p => p.id === selectedProfileId);
+      setCurrentProfileDetails(profileDetail || null);
+
+      const { data: assignedSkillsData, error: assignedSkillsError } = await supabase
+        .from('profile_skills')
+        .select(`
+          skill_id,
+          proficiency_level,
+          skills ( name ) 
+        `)
+        .eq('profile_id', selectedProfileId);
+
+      if (assignedSkillsError) throw assignedSkillsError;
+      setCurrentProfileAssignedSkills(assignedSkillsData as AssignedProfileSkill[] || []);
+
+    } catch (error: any) {
+      console.error('Erro ao buscar dados do perfil selecionado:', error);
+      setMessage('Erro ao buscar dados do perfil: ' + error.message);
+      setCurrentProfileAssignedSkills([]); 
+    } finally {
+      setIsLoadingProfileDetails(false);
+    }
+  }, [selectedProfileId, profiles, supabase]); // Dependências da função
+
 
   // useEffect para buscar os dados iniciais (lista de todos perfis e todas skills)
   useEffect(() => {
     const fetchInitialData = async () => {
       setIsLoadingInitialData(true);
-      setMessage(''); // Limpa mensagens ao carregar dados iniciais
+      setMessage(''); 
       
       try {
         const { data: profilesData, error: profilesError } = await supabase
@@ -85,55 +111,17 @@ export default function AssignSkillPage() {
       }
     };
     fetchInitialData();
-  }, []); // Roda apenas uma vez na montagem
+  }, []); // supabase pode ser adicionado como dependência se a instância puder mudar, mas geralmente não é necessário.
 
-  // useEffect para buscar detalhes e skills do perfil selecionado
+  // useEffect para buscar detalhes e skills do perfil QUANDO UM PERFIL É SELECIONADO
   useEffect(() => {
-    if (!selectedProfileId) {
-      setCurrentProfileDetails(null);
-      setCurrentProfileAssignedSkills([]);
-      return; // Sai se nenhum perfil estiver selecionado
-    }
-
-    const fetchProfileSpecificData = async () => {
-      setIsLoadingProfileDetails(true);
-      setMessage(''); 
-
-      try {
-        // 1. Buscar detalhes do perfil (usando a lista já carregada)
-        const profileDetail = profiles.find(p => p.id === selectedProfileId);
-        setCurrentProfileDetails(profileDetail || null);
-
-        // 2. Buscar skills já associadas a este perfil
-        const { data: assignedSkillsData, error: assignedSkillsError } = await supabase
-          .from('profile_skills')
-          .select(`
-            skill_id,
-            proficiency_level,
-            skills ( name ) 
-          `)
-          .eq('profile_id', selectedProfileId);
-
-        if (assignedSkillsError) throw assignedSkillsError;
-        // O console.log anterior mostrou que 'skills' é um objeto, então a interface está correta.
-        setCurrentProfileAssignedSkills(assignedSkillsData as AssignedProfileSkill[] || []);
-
-      } catch (error: any) {
-        console.error('Erro ao buscar dados do perfil selecionado:', error);
-        setMessage('Erro ao buscar dados do perfil: ' + error.message);
-        setCurrentProfileAssignedSkills([]); // Limpa em caso de erro
-      
-      } finally {
-
-        setIsLoadingProfileDetails(false);
-      }
-    };
-
-    // Só busca se 'profiles' já foi carregado, para evitar race condition
-    if (profiles.length > 0) {
+    if (profiles.length > 0 && selectedProfileId) { // Garante que 'profiles' já foi carregado
         fetchProfileSpecificData();
+    } else if (!selectedProfileId) {
+        setCurrentProfileDetails(null);
+        setCurrentProfileAssignedSkills([]);
     }
-  }, [selectedProfileId, profiles, supabase]); // Roda quando selectedProfileId ou profiles mudar
+  }, [selectedProfileId, profiles, fetchProfileSpecificData]); // Adiciona fetchProfileSpecificData como dependência
 
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -141,37 +129,59 @@ export default function AssignSkillPage() {
     setMessage('');
     setIsSubmitting(true);
 
-    if (!selectedProfileId || !selectedSkillId || proficiencyLevel < 1 || proficiencyLevel > 5) {
-      setMessage('Por favor, selecione um perfil, uma skill e um nível de proficiência válido (1-5).');
+  console.log('--- Iniciando handleSubmit ---');
+    console.log('Valor de selectedProfileId no início:', selectedProfileId, "Tipo:", typeof selectedProfileId);
+    console.log('Valor de selectedSkillId no início:', selectedSkillId, "Tipo:", typeof selectedSkillId);
+    console.log('Valor de proficiencyLevel no início:', proficiencyLevel, "Tipo:", typeof proficiencyLevel);
+    console.log('--- Fim dos logs iniciais ---');
+
+    let validationFailed = false;
+    let validationMessage = 'Por favor, preencha todos os campos obrigatórios e válidos.';
+
+    if (selectedProfileId === '' || selectedProfileId === null || selectedProfileId === undefined) {
+      console.log('FALHA NA VALIDAÇÃO: selectedProfileId está vazio.');
+      validationFailed = true;
+    }
+    if (selectedSkillId === '' || selectedSkillId === null || selectedSkillId === undefined) {
+      console.log('FALHA NA VALIDAÇÃO: selectedSkillId está vazio.');
+      validationFailed = true;
+    }
+    if (typeof proficiencyLevel !== 'number' || proficiencyLevel < 1 || proficiencyLevel > 5) {
+      console.log('FALHA NA VALIDAÇÃO: proficiencyLevel inválido. Valor:', proficiencyLevel, "Tipo:", typeof proficiencyLevel);
+      validationFailed = true;
+      validationMessage = 'Nível de proficiência deve ser um número entre 1 e 5.';
+    }
+
+    if (validationFailed) {
+      setMessage(validationMessage);
+      console.log('Validação falhou. Mensagem:', validationMessage);
       setIsSubmitting(false);
       return;
     }
     
-    const formData = new FormData(event.currentTarget);
-    // Adiciona profileId ao formData explicitamente se não for pego pelo 'name' (boa prática)
-    formData.set('profileId', selectedProfileId);
-    formData.set('skillId', selectedSkillId);
-    formData.set('proficiencyLevel', proficiencyLevel.toString());
+    console.log('Validação passou! Prosseguindo para Server Action.'); // LOG DE SUCESSO DA VALIDAÇÃO
 
+    const formData = new FormData(event.currentTarget);
+    formData.set('profileId', selectedProfileId); 
+    formData.set('skillId', selectedSkillId); 
+    formData.set('proficiencyLevel', proficiencyLevel.toString());
 
     startTransition(async () => {
       const result = await assignSkillToProfileAction(formData);
       setMessage(result.message);
       if (result.success) {
-        // Atualiza a lista de skills do perfil selecionado após sucesso
-        // A forma mais robusta é chamar router.refresh() se a Server Action usa revalidatePath
-        // ou re-buscar os dados específicos.
-        router.refresh(); // Assumindo que sua Server Action usa revalidatePath
-
-        // Opcional: Limpar campos do formulário de cima
-        // setSelectedSkillId(''); 
-        // setProficiencyLevel(3); 
+        setSelectedSkillId(''); 
+        setProficiencyLevel(3); 
+        router.refresh(); 
+        if (selectedProfileId) {
+          fetchProfileSpecificData(); 
+        }
       }
     });
     setIsSubmitting(false);
   };
 
-  // --- RENDERIZAÇÃO DO COMPONENTE ---
+  // --- RENDERIZAÇÃO DO COMPONENTE (permanece igual à sua última versão correta) ---
   if (isLoadingInitialData) {
     return <div className="container mx-auto p-8 text-center"><p>Carregando dados iniciais...</p></div>;
   }
@@ -192,7 +202,7 @@ export default function AssignSkillPage() {
               </label>
               <select
                 id="profile"
-                name="profileIdForm" // Nome diferente para não conflitar com selectedProfileId no FormData se não for controlado
+                name="profileId" 
                 value={selectedProfileId}
                 onChange={(e) => setSelectedProfileId(e.target.value)}
                 className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
@@ -214,7 +224,7 @@ export default function AssignSkillPage() {
               </label>
               <select
                 id="skill"
-                name="skillIdForm" // Nome diferente
+                name="skillId" 
                 value={selectedSkillId}
                 onChange={(e) => setSelectedSkillId(e.target.value)}
                 className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
@@ -231,13 +241,13 @@ export default function AssignSkillPage() {
             </div>
 
             <div>
-              <label htmlFor="proficiencyLevelForm" className="block text-sm font-semibold text-gray-700 mb-1">
+              <label htmlFor="proficiencyLevel" className="block text-sm font-semibold text-gray-700 mb-1">
                 Nível de Proficiência (1-5)
               </label>
               <input
                 type="number"
-                id="proficiencyLevelForm" // Nome diferente
-                name="proficiencyLevelForm" // Nome diferente
+                id="proficiencyLevel"
+                name="proficiencyLevel" 
                 value={proficiencyLevel}
                 onChange={(e) => setProficiencyLevel(parseInt(e.target.value, 10))}
                 min="1"

@@ -12,9 +12,9 @@ interface ActionResult {
 export async function assignSkillToProfileAction(formData: FormData): Promise<ActionResult> {
   const supabase = createClient();
 
-  const profileId = formData.get('profileIdForm') as string; // Usando os nomes com 'Form'
-  const skillId = formData.get('skillIdForm') as string;
-  const proficiencyLevel = formData.get('proficiencyLevelForm') as string;
+  const profileId = formData.get('profileId') as string; // Usando os nomes com 'Form'
+  const skillId = formData.get('skillId') as string;
+  const proficiencyLevel = formData.get('proficiencyLevel') as string;
 
   if (!profileId || !skillId || !proficiencyLevel) {
     return { success: false, message: "Erro: Perfil, Skill e Nível de Proficiência são obrigatórios." };
