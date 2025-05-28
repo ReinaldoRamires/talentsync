@@ -1,10 +1,9 @@
 // src/app/admin/vacancies/page.tsx
 
 import Link from 'next/link';
-// ⬇️ VERIFIQUE SE ESTE CAMINHO OU UM ALIAS '@/' FUNCIONA CORRETAMENTE PARA VOCÊ
 import { createSupabaseServerClient } from '../../../lib/supabase/server'; 
 import { cookies } from 'next/headers'; // Importe 'cookies' para o server client do Supabase
-
+import VacancyActionsMenu from './VacancyActionsMenu';
 interface Vacancy {
   id: number;
   title: string;
@@ -17,9 +16,7 @@ interface Vacancy {
 
 // Função para buscar as vagas REAIS do Supabase
 async function getVacancies(): Promise<Vacancy[]> {
-  // Para Server Components, é recomendado criar o cliente Supabase 
-  // com acesso aos cookies para operações no servidor.
-  // Se 'createClient()' do seu 'lib' não faz isso, substitua pela forma correta.
+
   const cookieStore = cookies();
   // Exemplo usando createServerComponentClient do @supabase/ssr (adapte se necessário)
   // const supabase = createServerComponentClient({ cookies: () => cookieStore }); 
@@ -54,7 +51,7 @@ export default async function VacanciesListPage() {
     // Lidar com o erro, talvez redirecionar para o login se não houver usuário
   }
   const currentUserId = user?.id;
-  // console.log('ID do Usuário Logado (VacanciesListPage):', currentUserId); // Para depuração
+  console.log('[ Server VacanciesListPage ] Dados das Vagas Recebidas:', JSON.stringify(vacancies, null, 2));
 
   return (
     <div className="container mx-auto p-4 md:p-8"> {/* Ajustado padding para mobile */}
@@ -62,11 +59,9 @@ export default async function VacanciesListPage() {
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
           Gerenciamento de Vagas
         </h1>
-        <Link href="/admin/vacancies/create" legacyBehavior>
-          <a className="px-4 py-2 bg-green-600 text-white font-semibold rounded-md shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 w-full md:w-auto text-center">
-            + Criar Nova Vaga
-          </a>
-        </Link>
+        <Link href="/admin/vacancies/create" className="px-4 py-2 ...">
+  + Criar Nova Vaga
+</Link>
       </div>
 
       {vacancies.length === 0 ? (
@@ -96,56 +91,56 @@ export default async function VacanciesListPage() {
                 </th>
               </tr>
             </thead>
-            <tbody>
-              {vacancies.map((vacancy) => (
-                <tr key={vacancy.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-4 border-b border-gray-200 text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{vacancy.id}</p>
-                  </td>
-                  <td className="px-5 py-4 border-b border-gray-200 text-sm">
-                    <Link href={`/admin/vacancies/${vacancy.id}/details`} legacyBehavior>
-                      <a className="text-gray-900 hover:text-indigo-600 whitespace-no-wrap font-medium">
-                        {vacancy.title}
-                      </a>
-                    </Link>
-                  </td>
-                  <td className="px-5 py-4 border-b border-gray-200 text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{vacancy.company_name || 'N/A'}</p>
-                  </td>
-                  <td className="px-5 py-4 border-b border-gray-200 text-sm">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${vacancy.status === 'open' ? 'bg-green-100 text-green-800' : 
-                        vacancy.status === 'closed' ? 'bg-red-100 text-red-800' : 
-                        vacancy.status === 'filled' ? 'bg-blue-100 text-blue-800' : 
-                        'bg-yellow-100 text-yellow-800'}`}>
-                      {vacancy.status ? vacancy.status.charAt(0).toUpperCase() + vacancy.status.slice(1) : 'N/A'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 border-b border-gray-200 text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">
-                      {new Date(vacancy.created_at).toLocaleDateString('pt-BR', {
-                        day: '2-digit', month: '2-digit', year: 'numeric'
-                      })}
-                    </p>
-                  </td>
-                  <td className="px-5 py-4 border-b border-gray-200 text-sm">
-                    <Link href={`/admin/vacancies/${vacancy.id}/manage-skills`} legacyBehavior>
-                      <a className="text-indigo-600 hover:text-indigo-800 font-medium mr-3"> {/* Adicionado mr-3 para espaçamento */}
-                        Gerenciar Skills
-                      </a>
-                    </Link>
-                    {/* Placeholder para o Menu de Ações Condicionais (próximo passo)
-                      Aqui virá o componente do menu de 3 pontinhos com as opções 
-                      "Editar", "Ver Candidatos", "Arquivar", etc.,
-                      visíveis/habilitadas com base na comparação de currentUserId e vacancy.owner_id.
-                    */}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
+              <tbody>
+  {vacancies.map((vacancy) => (
+    <tr key={vacancy.id} className="hover:bg-gray-50">
+      {/* Célula para ID */}
+      <td className="px-5 py-4 border-b border-gray-200 bg-white text-sm">
+        <p className="text-gray-900 whitespace-no-wrap">{vacancy.id}</p>
+      </td>
+      {/* Célula para Título da Vaga (como Link para detalhes) */}
+      <td className="px-5 py-4 border-b border-gray-200 bg-white text-sm">
+        <Link href={`/admin/vacancies/${vacancy.id}/details`} legacyBehavior>
+          <a className="text-gray-900 hover:text-indigo-600 whitespace-no-wrap font-medium">
+            {vacancy.title}
+          </a>
+        </Link>
+      </td>
+      {/* Célula para Empresa */}
+      <td className="px-5 py-4 border-b border-gray-200 bg-white text-sm">
+        <p className="text-gray-900 whitespace-no-wrap">{vacancy.company_name || 'N/A'}</p>
+      </td>
+      {/* Célula para Status (com estilização condicional) */}
+      <td className="px-5 py-4 border-b border-gray-200 bg-white text-sm">
+        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+          ${vacancy.status === 'open' ? 'bg-green-100 text-green-800' : 
+            vacancy.status === 'closed' ? 'bg-red-100 text-red-800' : 
+            vacancy.status === 'filled' ? 'bg-blue-100 text-blue-800' : 
+            'bg-yellow-100 text-yellow-800'}`}>
+          {vacancy.status ? vacancy.status.charAt(0).toUpperCase() + vacancy.status.slice(1) : 'N/A'}
+        </span>
+      </td>
+      {/* Célula para Data de Criação (formatada) */}
+      <td className="px-5 py-4 border-b border-gray-200 bg-white text-sm">
+        <p className="text-gray-900 whitespace-no-wrap">
+          {new Date(vacancy.created_at).toLocaleDateString('pt-BR', {
+            day: '2-digit', month: '2-digit', year: 'numeric'
+          })}
+        </p>
+      </td>
+      {/* Célula para Ações (com o menu) */}
+      <td className="px-5 py-4 border-b border-gray-200 bg-white text-sm text-right">
+        <VacancyActionsMenu 
+          vacancy={vacancy} 
+          currentUserId={currentUserId} 
+        />
+      </td>
+    </tr>
+  ))}
+</tbody>
+       </table>
+     </div>
+   )}
+ </div>
+);
 }
